@@ -14,8 +14,9 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define THREAD_NO 16
+#define THREAD_NO 4
 #define WAIT_TIME 2
+#define MAX_BUFFER_SIZE 8
 struct arg_struct{
     int id;
     int time;
@@ -113,7 +114,7 @@ void blinkBuffer(char buf[THREAD_NO]){
     }
     printf("Joined!\n");
 }
-void sendStr(char sampleStr[1024]){
+void sendStr(char sampleStr[MAX_BUFFER_SIZE]){
     signal(SIGUSR1, handler);
     struct sigaction act;
     act.sa_handler = sig_alrm;
@@ -122,7 +123,7 @@ void sendStr(char sampleStr[1024]){
     sigaction(SIGALRM, &act, 0);
     int k, counter;
     char buf[THREAD_NO];
-    for(counter = 0; counter < 1024; ){
+    for(counter = 0; counter <= MAX_BUFFER_SIZE; ){
         if(counter%THREAD_NO==0 && counter !=0){
             blinkBuffer(buf);
         }
@@ -135,18 +136,24 @@ void sendStr(char sampleStr[1024]){
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
-    char sampleStr[1024];
-    int i;
-    //Fancy string simulator
-    for(i=0; i< 1024; i++){
-        int r = rand()%2; 
-        if(r%2==0){
-            sampleStr[i] = '0';
-        }else{
-            sampleStr[i] = '1';
-        }
+    char sampleStr[MAX_BUFFER_SIZE];
+    scanf("%s", sampleStr);
+    
+    while(strcmp(sampleStr,"exit")!=0){
+        sendStr(sampleStr);
+        scanf("%s", sampleStr);
     }
-    sendStr(sampleStr);
+//    int i;
+//    //Fancy string simulator
+//    for(i=0; i< MAX_BUFFER_SIZE; i++){
+//        int r = rand()%2; 
+//        if(r%2==0){
+//            sampleStr[i] = '0';
+//        }else{
+//            sampleStr[i] = '1';
+//        }
+//    }
+    
     
     
     return 0;
