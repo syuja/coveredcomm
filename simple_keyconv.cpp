@@ -1,5 +1,5 @@
 /*****
-compile :  g++ -std=c++11 simple_keyconv.cpp
+compile :  g++ -std=c++11 simple_keyconv.cpp -o key
 
 CHANGE:
 PRODUCEPATHS <== TO ADD LOCATIONS OF SSH KEYS
@@ -24,6 +24,7 @@ Finally produces bits of a key
 #include <sys/stat.h>
 #include <dirent.h>
 #include <string.h>
+#include <algorithm>
 
 
   using namespace std;
@@ -117,7 +118,8 @@ int main(){
 //produce possible .ssh paths
 void producePaths(){
   //OSX
-  string path1 = "/Users/home/.ssh";
+  string path1 = "./.ssh";
+  // string path1 = "/Users/home/.ssh";
   string path2 = "/root/.ssh";
   string path3 = "/home/syuja/.ssh";
 
