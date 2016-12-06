@@ -2,9 +2,9 @@
 ---  
 The basic idea is that the server will listen/close ports to transmit data to a client.   
   
-The client will attempt to connect to the ports;  
-if the connection is successful then 1 has been transmitted,  
-else **ECONNREFUSED**, then 0 has been transmitted.  
+The client will attempt to connect to the ports:  
+  if the connection is successful then 1 has been transmitted,  
+  else **ECONNREFUSED**, then 0 has been transmitted.  
 
 The Server and the Client have been implemented in two modules each.  
 
