@@ -67,7 +67,7 @@ int main(){
   producePaths();
   //tests guesses of .ssh directories
   findSSHFile();
-  
+
   //store keys from .ssh directories
   fill2DAllKeys();
 
@@ -125,17 +125,17 @@ void producePaths(){
   possibleSSHPaths.push_back(path2);
   possibleSSHPaths.push_back(path3);
 
-	vector<string> temp_possiblePaths; 
+	vector<string> temp_possiblePaths;
   //erase entries that don't exist
   dirFound(possibleSSHPaths);
   if(possibleSSHPaths.empty()){
-		cerr << "Paths Do Not Exist" << endl; 
-	  //print possible paths 
+		cerr << "Paths Do Not Exist" << endl;
+	  //print possible paths
 	  for(int i = 0; i < temp_possiblePaths.size(); ++i){
 	  	cerr << "Path Doesn't Exist: " << temp_possiblePaths[i] << endl;
 	  }
 	  cerr << "Please Add More Paths to producePaths(): possibleSSHPaths" << endl;
-	  exit(1); 
+	  exit(1);
   }
 }
 
@@ -182,7 +182,7 @@ void findSSHFile(){
   }
   if(allKeyPaths.empty()){
   	cerr << "findSSHFile(): no ssh file found" << endl;
-  	cerr << "Please 1) add more possibleSSHPaths to ProducePaths()\n" << 
+  	cerr << "Please 1) add more possibleSSHPaths to ProducePaths()\n" <<
   	"or 2) create an ssh key in one of the possibleSSHPaths" << endl;
   	exit(1);
   }
@@ -277,6 +277,8 @@ string printBinary(int x){
   string binary = "";
   //converts
   binary = bitset<BYTESIZE>(x).to_string();
+  rotate(binary.begin(), binary.begin()+1, binary.end());
+
   return binary;
 }
 
@@ -289,12 +291,12 @@ void getBinBack(vector<string> binaryKey){
 
 
 
-//PRINT 
+//PRINT
 void printVector2(vector<vector<string> > vec){
   cout << "entered printVector2" << endl;
   if(vec.empty()){
   	cout << "allkeys is empty!!!!" << endl;
-  	return; 
+  	return;
   }
   for(int i = 0; i < vec.size(); ++i ){
     cout << "\nbegin key = " << endl;
