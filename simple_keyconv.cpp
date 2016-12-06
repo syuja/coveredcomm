@@ -1,5 +1,5 @@
 /*****
-compile :  g++ -std=c++11 simple_keyconv.cpp
+compile :  g++ -std=c++11 simple_keyconv.cpp -o key
 
 CHANGE:
 PRODUCEPATHS <== TO ADD LOCATIONS OF SSH KEYS
