@@ -39,7 +39,7 @@
 static int START_PORT = -1;
 bool allconnections[THREAD_NO];
 
-vector<int> all_sockfds;
+vector<int> all_sockfds(THREAD_NO);
 
 struct arg_struct{
     int id;
@@ -108,11 +108,18 @@ void *set(void *arguments);
 int main(int argc, char *argv[]){
     vector<string> binary_list;
     char tmp[MAX_BUFFER_SIZE];
+
+    binary_list.push_back("00000001");
+    binary_list.push_back("00000001");
     while(!cin.eof()){
       cin >> tmp;
+      //s1.find(s2) != std::string::npos
+      if (strcmp(tmp, "exit")==0) break;
       tmp[MAX_BUFFER_SIZE-1]='1';
       binary_list.push_back(tmp);
     }
+    binary_list.push_back("00000001");
+    binary_list.push_back("00000001");
 
     START_PORT = findStartPort();
 
@@ -149,9 +156,10 @@ void startConnection(){
     }
 
     for(int i = 0; i < THREAD_NO; ++i){
-      all_sockfds.push_back(socket(AF_INET, SOCK_STREAM, 0));
+      all_sockfds[i] = socket(AF_INET, SOCK_STREAM, 0);
+      //all_sockfds.push_back(socket(AF_INET, SOCK_STREAM, 0));
 
-    if((setsockopt(all_sockfds.back(), SOL_SOCKET, SO_REUSEADDR,
+    if((setsockopt(all_sockfds[i], SOL_SOCKET, SO_REUSEADDR,
       (char *) &reuseaddr, sizeof(reuseaddr))) < 0){
         perror("findStartPort setsockopt error: ");
     }
@@ -162,9 +170,9 @@ void startConnection(){
       sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
       //CREATE sockets and push them
-      ::bind(all_sockfds.back(), (struct sockaddr*) &sock_addr, sizeof(sock_addr));
+      bind(all_sockfds[i], (struct sockaddr*) &sock_addr, sizeof(sock_addr));
 
-      listen(all_sockfds.back(),LISTENQ);
+      listen(all_sockfds[i],LISTENQ);
       cerr << "call pthread_create" << endl;
       pthread_create(&(threads[i]), NULL, &startAccept, (void*) &ints[i]);
     }
@@ -172,6 +180,11 @@ void startConnection(){
     cerr << "main thread time_out sleeping" << endl;
     cerr << "main thread time_out sleeping done" << endl;
     sleep(WAIT_TIME);
+    //close all of the sockets
+    for(int i = 0; i < THREAD_NO; ++i){
+      cerr << "closing socket = " << all_sockfds[i] << endl;
+      close(all_sockfds[i]);
+    }
     //kill all of them
     for(int i = 0; i < THREAD_NO; ++i){
       cerr << "killing thread == " << threads[i] << endl;
@@ -183,11 +196,7 @@ void startConnection(){
       cerr << "joining thread == " << threads[i] << endl;
       pthread_join(threads[i], NULL);
     }
-    //close all of the sockets
-    for(int i = 0; i < THREAD_NO; ++i){
-      cerr << "closing socket = " << all_sockfds[i] << endl;
-      close(all_sockfds[i]);
-    }
+    
     ++j;
   }while(!allConnected());
   cerr << "ALL CONNECTED!!" << endl;
@@ -229,6 +238,7 @@ void *startAccept(void *arg){
   //time
   else{
     accept(all_sockfds[i], (struct sockaddr*) &recaddr, &len);
+    close(all_sockfds[i]);
     allconnections[i] = true;
   }
   pthread_exit(NULL);
@@ -278,7 +288,7 @@ int findStartPort(){
       serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
       //try binding
-      if(::bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+      if(bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
         //don't print
         perror("findStartPort bind error: ");
       }
@@ -401,6 +411,6 @@ void *set(void *arguments){
     //{
         connfd = accept(threads[args->id].listenfd,(struct sockaddr*)&recaddr, &len);
         close(connfd);
-        sleep(WAIT_TIME);
+        //sleep(WAIT_TIME);
     //}
 }
