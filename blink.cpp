@@ -17,16 +17,19 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <time.h>
-#include <pthread.h>
 #include <signal.h>
 #include <strings.h>
 #include <time.h>
 #include <stdlib.h>
+#include <chrono>
+#include <pthread.h>
 
   using namespace std;
 
 #define THREAD_NO 8 //also the number of ports
-#define WAIT_TIME 2
+#define WAIT_TIME 1
+#define TIME_OUT 5
+#define TRIES 10
 //fgets stops at MAX_BUFFER_SIZE - 1, and appends \n at MAX_BUFFER_SIZE
 #define MAX_BUFFER_SIZE 8
 #define MINPORT 1025
@@ -34,7 +37,7 @@
 #define LISTENQ 10 //for listen
 
 static int START_PORT = -1;
-bool allconnections[THREAD_NO-1];
+bool allconnections[THREAD_NO];
 
 vector<int> all_sockfds;
 
@@ -75,6 +78,11 @@ void handler(int signum){
     pthread_exit(NULL);
 }
 
+//thread being killed after time out!
+void thread_handler(int signo){
+  //exit, so mainthread can do pthread_join
+   pthread_exit(NULL);
+}
 
 //FUNCTION DECLARATIONS:
 //find starting port number
@@ -89,7 +97,7 @@ bool allConnected();
 
 
 //separates bits: 1 bit to each thread
-void sendStr(char sampleStr[MAX_BUFFER_SIZE]);
+void sendStr(string sampleStr);
 
 void blinkBuffer(char buf[THREAD_NO]);
 
@@ -98,17 +106,24 @@ void *set(void *arguments);
 
 
 int main(int argc, char *argv[]){
+    vector<string> binary_list;
+    char tmp[MAX_BUFFER_SIZE];
+    while(!cin.eof()){
+      cin >> tmp;
+      tmp[MAX_BUFFER_SIZE-1]='1';
+      binary_list.push_back(tmp);
+    }
 
     START_PORT = findStartPort();
 
-    //start connection
+
+    //blinks until client connects
     startConnection();
 
-    char sampleStr[MAX_BUFFER_SIZE];
     //fgets appends newline at MAX_BUFFER_SIZE
-    while(scanf("%s", sampleStr)){
-      //sendStr ==> creates threads to send key char in binary
-      sendStr(sampleStr);
+    for(int i = 0 ; i < binary_list.size(); ++i){
+      cout << "sending = " << binary_list[i] << endl;
+      sendStr(binary_list[i]);
     }
 
     //close the connection
@@ -116,57 +131,102 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-
+//flashes until the client sees it
 void startConnection(){
   struct sockaddr_in sock_addr;
   pthread_t threads[THREAD_NO];
+  int j = 0;
+  int ints[THREAD_NO];
 
-  for(int i = 0; i < THREAD_NO-1; ++i){
-    allconnections[i] = false;
+  for(int k = 0; k < THREAD_NO; ++k){
+    ints[k] = k;
   }
+  int reuseaddr = 1;
+  do{
+    cerr << "Loop = " << j << endl;
+    for(int i = 0; i < THREAD_NO-1; ++i){
+      allconnections[i] = false;
+    }
 
-  for(int i = 0; i < THREAD_NO; ++i){
-    all_sockfds.push_back(socket(AF_INET, SOCK_STREAM, 0));
+    for(int i = 0; i < THREAD_NO; ++i){
+      all_sockfds.push_back(socket(AF_INET, SOCK_STREAM, 0));
 
-    memset(&sock_addr, 0, sizeof(sock_addr));
-    sock_addr.sin_family = AF_INET;
-    sock_addr.sin_port = htons(START_PORT+i);
-    sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if((setsockopt(all_sockfds.back(), SOL_SOCKET, SO_REUSEADDR,
+      (char *) &reuseaddr, sizeof(reuseaddr))) < 0){
+        perror("findStartPort setsockopt error: ");
+    }
 
-    //CREATE sockets and push them
-    ::bind(all_sockfds.back(), (struct sockaddr*) &sock_addr, sizeof(sock_addr));
+      memset(&sock_addr, 0, sizeof(sock_addr));
+      sock_addr.sin_family = AF_INET;
+      sock_addr.sin_port = htons(START_PORT+i);
+      sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    listen(all_sockfds.back(),LISTENQ);
-    pthread_create(&(threads[i]), NULL, &startAccept, (void*) &i);
-  }
+      //CREATE sockets and push them
+      ::bind(all_sockfds.back(), (struct sockaddr*) &sock_addr, sizeof(sock_addr));
 
-  //join
-  for(int i = 0; i < THREAD_NO; ++i){
-    pthread_join(threads[i], NULL);
-  }
-  //close all of the sockets
-  for(int i = 0; i < THREAD_NO; ++i){
-    close(all_sockfds[i]);
-  }
+      listen(all_sockfds.back(),LISTENQ);
+      cerr << "call pthread_create" << endl;
+      pthread_create(&(threads[i]), NULL, &startAccept, (void*) &ints[i]);
+    }
+    //
+    cerr << "main thread time_out sleeping" << endl;
+    cerr << "main thread time_out sleeping done" << endl;
+    sleep(WAIT_TIME);
+    //kill all of them
+    for(int i = 0; i < THREAD_NO; ++i){
+      cerr << "killing thread == " << threads[i] << endl;
+      pthread_kill(threads[i],SIGUSR2);
+    }
+
+    //join
+    for(int i = 0; i < THREAD_NO; ++i){
+      cerr << "joining thread == " << threads[i] << endl;
+      pthread_join(threads[i], NULL);
+    }
+    //close all of the sockets
+    for(int i = 0; i < THREAD_NO; ++i){
+      cerr << "closing socket = " << all_sockfds[i] << endl;
+      close(all_sockfds[i]);
+    }
+    ++j;
+  }while(!allConnected());
+  cerr << "ALL CONNECTED!!" << endl;
+  sleep(TIME_OUT);
+
 }
 
-//HACK: need to handle; disconnect and reconnect???
+//establish connection with client
 void *startAccept(void *arg){
   struct sockaddr_in recaddr;
   socklen_t len = sizeof(recaddr);
   memset(&recaddr, 0, sizeof(recaddr));
   recaddr.sin_family = AF_INET;
 
+  //register signal handler
+  struct sigaction thread_sig;
+  thread_sig.sa_handler = thread_handler;
+  sigemptyset(&thread_sig.sa_mask);
+  thread_sig.sa_flags = 0;
+  sigaction(SIGUSR2, &thread_sig, 0);
+
   //accept
   int i = *(int *) arg;
+  cerr << "i = " << i << endl;
+
+  int maxfd;
+
+  //one thread ==> clock
   if(i == THREAD_NO - 1){
-    while(!allConnected()){
+    //blink
+    int i = TRIES;
+    while(--i){
+      listen(all_sockfds[i], LISTENQ);
       sleep(WAIT_TIME);
       close(all_sockfds[i]);
       sleep(WAIT_TIME);
-      listen(all_sockfds[i], LISTENQ);
     }
   }
+  //time
   else{
     accept(all_sockfds[i], (struct sockaddr*) &recaddr, &len);
     allconnections[i] = true;
@@ -174,19 +234,19 @@ void *startAccept(void *arg){
   pthread_exit(NULL);
 }
 
-void endConnection(){
-  //close all of the ports
-
-}
 
 bool allConnected(){
   bool isall = true;
-  for(int i = 0; i < THREAD_NO-1 && isall; ++i){
-    isall = isall && allconnections[i];
+  for(int i = 0; i < THREAD_NO-1; ++i){
+    if(allconnections[i] == 0){
+      isall = false;
+    }
+    cerr << "allconnections[" << i << "] = " << allconnections[i] << endl;
   }
   return isall;
 }
 
+//finds the port to start from; sets global START_PORT
 int findStartPort(){
   vector<int> connected;
   char hostname[] = "hostname";
@@ -244,7 +304,7 @@ int findStartPort(){
 }
 
 //separates bits for each thread
-void sendStr(char sampleStr[MAX_BUFFER_SIZE]){
+void sendStr(string sampleStr){
   //prepare signal handlers
   struct sigaction act, act2;
 
@@ -262,7 +322,7 @@ void sendStr(char sampleStr[MAX_BUFFER_SIZE]){
   int k, counter;
   char buf[THREAD_NO];
 
-  for(counter = 0; counter < MAX_BUFFER_SIZE; ){
+  for(counter = 0; counter < MAX_BUFFER_SIZE+1; ){
       if(counter%THREAD_NO==0 && counter !=0){
           blinkBuffer(buf);
       }
@@ -308,10 +368,11 @@ void blinkBuffer(char buf[THREAD_NO]){
     printf("Joined!\n");
 }
 
-
 void *set(void *arguments){
-
+    int reuseaddr = 1;
     struct arg_struct *args = (arg_struct *) arguments;
+    struct sockaddr_in recaddr;
+    socklen_t len = sizeof(recaddr);
     printf("Setting up[%d]:[%d]\n", args->id, args->port);
     int connfd = 0;
     threads[args->id].listenfd = 0;
@@ -321,6 +382,10 @@ void *set(void *arguments){
     time_t ticks;
 
     threads[args->id].listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if((setsockopt(threads[args->id].listenfd, SOL_SOCKET, SO_REUSEADDR,
+      (char *) &reuseaddr, sizeof(reuseaddr))) < 0){
+        perror("findStartPort setsockopt error: ");
+    }
     memset(&serv_addr, '0', sizeof(serv_addr));
     memset(sendBuff, '0', sizeof(sendBuff));
 
@@ -332,11 +397,10 @@ void *set(void *arguments){
       sizeof(serv_addr));
 
     listen(threads[args->id].listenfd, 10);
-    while(1)
-    {
-        connfd = accept(threads[args->id].listenfd,
-            (struct sockaddr*)NULL, NULL);
+    //while(1)
+    //{
+        connfd = accept(threads[args->id].listenfd,(struct sockaddr*)&recaddr, &len);
         close(connfd);
-        sleep(1);
-    }
+        sleep(WAIT_TIME);
+    //}
 }
