@@ -25,17 +25,16 @@ int main(){
       //push back into the vector
       temp.pop_back(); //remove the extra one at the end
       binaryKey.push_back(temp);
+      temp.clear();
     }
     //call getKeyBack
     binaryKey.pop_back();
 
-    cout << "calling getKeyBack" << endl;
     getKeyBack(binaryKey);
     return 0;
 }
 //transform text file into a key and print it!!
 string printASCII(string binary ){
-
   unsigned long x  = bitset<BYTESIZE>(binary).to_ulong();
   char castchar[2];
   castchar[0]= (char) x; castchar[1] = '\0';
