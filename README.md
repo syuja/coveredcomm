@@ -9,11 +9,11 @@ The client will attempt to connect to the ports:
 The Server and the Client have been implemented in two modules each.  
 
 ## Server:  
-First compile, `keyconv.cpp` using: `g++ -std=c++11 keyconv.cpp -o key`.  
+First compile `keyconv.cpp` using: `g++ -std=c++11 keyconv.cpp -o key`.  
 This module will find `SSH` keys and print them to `stdout`.  
 
 Then, compile `blink.cpp` using: `g++ -pthread -std=c++11 blink.cpp -o blink`.  
-This module will actually transmit the `SSH` key.  
+This module will transmit the `SSH` key.  
 
 ## Client:  
 First, compile `bin2key.cpp` using: `g++ -std=c++11 bin2key.cpp -o bin2key`.  
