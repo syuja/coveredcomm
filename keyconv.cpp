@@ -1,6 +1,6 @@
 /************
   Compile :  make key
-  Run: ./key <number of ports to use> <paths to private SSH keys>
+  Run: ./key [number of ports to use] [paths to private SSH keys]
 
   It accepts multiple paths, but will use the first functional one.
 
@@ -39,10 +39,10 @@ string convertToBinary(char c);
 
 //Transmit the Message in Multiples of NUM_PORTS
 void transmitMssg();
+string transmitLine(vector<string> binaryLine);
 
-/********************
-*UTILITY:
-********************/
+
+//UTILITY:
 template<typename T>
 void printVector(vector<T> vec);
 
@@ -55,7 +55,6 @@ int main(int argc, char** argv){
   //parse arguments: NUM_PORTS and KeyPaths
   parseArgs(argc, argv);
 
-
   //checks given path is a private ssh key file
   checkPaths();
 
@@ -67,7 +66,6 @@ int main(int argc, char** argv){
 
   return 0;
 }
-
 
 
 /********************
@@ -86,7 +84,7 @@ void parseArgs(int arg_count, char** argv){
 
   //multiple of 8?
   if(NUM_PORTS % 8 !=0){
-    cerr << "Error keyconv.cpp: parseArgs NUMPORTS not multiple of 8" << endl;
+    cerr << "Error keyconv.cpp: parseArgs NUM_PORTS not multiple of 8" << endl;
     exit(1);
   }
 
@@ -153,6 +151,8 @@ void readConvertKey(){
     for(char c : line){
       binaryLine.push_back(convertToBinary(c));
     }
+    //push newline since getline discards it
+    binaryLine.push_back(convertToBinary('\n'));
     //save it in binary
     BINARYKEY.push_back(binaryLine);
     //clear prev values
@@ -168,37 +168,48 @@ string convertToBinary(char x){
 
   //convert int to binary
   string binary = bitset<BYTESIZE>(x).to_string();
-  //HACK: necessary for previous blink.cpp implementation
+  binary[0] = '1';
+  //rotate for easy conversion by client
   rotate(binary.begin(), binary.begin()+1, binary.end());
 
   return binary;
 }
 
 /********************
-*TRANSMIT with PADDING
+*TRANSMIT
 ********************/
 void transmitMssg(){
-  //how many characters to print at once? 2,3,4?
-  int at_once = NUM_PORTS/8;
+    for(int line_num = 0; line_num < BINARYKEY.size(); ++line_num){
+      //calls helper
+      string temp = transmitLine(BINARYKEY[line_num]);
+      cout << temp;
+    }
+}
 
-  for(int i = 0; i < BINARYKEY.size(); ++i){
-      //print multiples first then remaining characters
-      int quotient = BINARYKEY[i].size()/at_once;
-      int rem = BINARYKEY[i].size()%at_once;
+//transmitMssg helper
+string transmitLine(vector<string> binaryLine){
+  int limit = NUM_PORTS/8;
+  string tmp = "";
 
-      int j;
-      for(j = 0; j < quotient; ++j){
-        //multiples first
-        for(int k = 0; k < at_once; ++k){
-          cout << BINARYKEY[i][j+k];
-        }
-        cout << endl;
-      }
-      //remainder
-      for(int l = 0; l < rem; ++l){
-        cout << BINARYKEY[i][j+l] << endl;
-      }
+  //places as many characters as possible for transmission at once!
+  int pos = 0;
+  while(pos <= binaryLine.size() - limit){
+    for(int i = pos; i < limit+pos; ++i){
+      tmp += binaryLine[i];
+    }
+    tmp += '\n';
+    pos = pos + limit;
   }
+
+  int tmp_pos = pos;
+  while(pos < binaryLine.size()){
+    tmp+= binaryLine[pos];
+    ++pos;
+  }
+
+  if(tmp_pos < binaryLine.size()) tmp+= '\n';
+
+  return tmp;
 }
 
 /********************

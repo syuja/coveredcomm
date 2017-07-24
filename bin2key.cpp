@@ -1,40 +1,55 @@
-/******
-Compile:
-g++ -std=c++11 bin2key.cpp -o bin2key
-Input:
- cat bin_file.txt | ./bin2key
+/************
+  Compile :  make bin2key
+  Run: ./bin2key [saved_file]
+  or make runClient
 
-*******/
-#include<iostream>
-#include<string>
-#include<vector>
+  Requires the Saved File
+  Converts the Saved Received Binary Message into the Original SSH Key
+************/
+
+#include <iostream>
+#include <string>
+#include <vector>
 #include <bitset>
-
+#include <fstream>
   using namespace std;
+
+vector<string> CLEAN_BINARYKEY;
 
 #define BYTESIZE 8
 
+/********************
+*FUNCTIONS:
+********************/
 string printASCII(string binary );
 void getKeyBack(vector<string> binaryKey);
 
-int main(){
-    vector<string> binaryKey;
-    string temp;
-    //read from stdin
-    while(getline(cin, temp)){
-      //push back into the vector
-      temp.pop_back(); //remove the extra one at the end
-      binaryKey.push_back(temp);
-      temp.clear();
-    }
-    //call getKeyBack
-    binaryKey.pop_back();
+int main(int argc, char** argv){
+  //read file into CLEAN_BINARYKEY
 
-    getKeyBack(binaryKey);
-    return 0;
+  //open the file
+  string FILE = argv[1];
+  ifstream file;
+  file.open(FILE);
+
+  string line;
+
+  while(getline(file,line)){
+    //already in multiples of 8 (see client.cpp writeBinary)
+    line.pop_back();
+    CLEAN_BINARYKEY.push_back(line);
+  }
+  getKeyBack(CLEAN_BINARYKEY);
+
+  return 0;
 }
-//transform text file into a key and print it!!
+
+/********************
+*CONVERT
+********************/
+//converts "1010101" ==> char
 string printASCII(string binary ){
+  //if(binary == "0000101") cout << " newline " << endl;
   unsigned long x  = bitset<BYTESIZE>(binary).to_ulong();
   char castchar[2];
   castchar[0]= (char) x; castchar[1] = '\0';
@@ -44,7 +59,6 @@ string printASCII(string binary ){
 
 //call printASCII on each character
 void getKeyBack(vector<string> binaryKey){
-
   for(int i = 0; i < binaryKey.size(); ++i){
     cout << printASCII(binaryKey[i]);
   }
