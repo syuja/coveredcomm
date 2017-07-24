@@ -102,7 +102,7 @@ int main(int argc, char** argv){
   START_PORT = findServerPorts();
   cout << "Connected to Server on Start Port : " << START_PORT << endl << endl;;
 
-  cout << "Listening for Message..." << endl << endl;
+  cout << "Listening for Message..." << endl;
   startReceiving();
 
   cout << "Writing Message to File..." << endl;
@@ -350,7 +350,7 @@ void startReceiving(){
 
     terminateThreads(tid);
 
-    cout << "\nreceived: " << RECEIVED_MAP << endl;
+    cout << "\nreceived: " << RECEIVED_MAP;
     //push it!
     BINARYKEY.push_back(RECEIVED_MAP);
 
