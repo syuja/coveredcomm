@@ -182,7 +182,7 @@ int findServerPorts(){
       }
 
       //main thread waits a few seconds (like server)
-      sleep(WAIT_TIME);
+      usleep(WAIT_TIME);
 
       //kills, joins and closes sockets
       terminateThreads(tid);
@@ -346,7 +346,7 @@ void startReceiving(){
                       (void *) &thread_id[i]);
     }
 
-    sleep(WAIT_TIME);
+    usleep(WAIT_TIME);
 
     terminateThreads(tid);
 
@@ -372,7 +372,7 @@ void *threadReceive(void *arg){
 
   //sockets are already created
 
-  int attempts = 10;
+  int attempts = 4;
   //connect
   do{
     //socket, connect and close may not be multi-thread safe

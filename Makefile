@@ -8,12 +8,16 @@ LIBS = -pthread
 #Bits to Transfer at a Time
 NUM_PORTS = 64
 #Server IP
-SERV_IP = 144.174.173.65
+SERV_IP = 192.168.0.20
 #Location of SSH Keys
 # KEYPATH = /home/syuja/.ssh
 KEYPATH = ~/.ssh/covert_channel
 SAVED = bin_file.txt
-WAIT_TIME = 2
+#WAIT_TIME = 2000000 #2 seconds
+#WAIT_TIME = 1000000 #1 seconds
+WAIT_TIME = 500000 #0.5 seconds
+# WAIT_TIME = 100000 #0.1 seconds
+
 
 
 .Phony: all clean blink key bin2key runClient runServer

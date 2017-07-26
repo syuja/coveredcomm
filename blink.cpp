@@ -231,7 +231,7 @@ void startConnection(){
     }
 
     //main thread wait a few seconds!!
-    sleep(WAIT_TIME);
+    usleep(WAIT_TIME);
 
     //kill, join threads and close sockets
     terminateThreads(tid, sock_map, "SIGUSR2");
@@ -400,7 +400,7 @@ void sendMessage(){
     }
 
       //main thread wait for sending
-      sleep(WAIT_TIME);
+      usleep(WAIT_TIME);
 
       //kill, join and close
       terminateThreads(tid, *it, "SIGUSR1");
